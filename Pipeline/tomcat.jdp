@@ -1,0 +1,20 @@
+pipeline {
+  agent any
+  stages {
+    stage('Gitlab-Pull') { 
+      steps {
+          git credentialsId: 'GitLab', url: 'https://gitlab.com/atulyw/cbz-student-ui.git'
+      }
+    }  
+    stage('Build'){
+        steps{
+          sh label: '', script: 'mvn clean package'  
+        }
+    }
+    stage('Deploy'){
+        steps{
+            deploy adapters: [tomcat8(credentialsId: 'tomcat', path: '', url: 'http://18.191.109.148:8080')], contextPath: '/', war: '**/*.war'
+        }
+    }
+  }
+}

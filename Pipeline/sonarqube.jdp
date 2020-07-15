@@ -1,0 +1,27 @@
+pipeline {
+  agent any
+  stages {
+    stage('Gitlab-Pull') { 
+      steps {
+          git credentialsId: 'GitLab2', url: 'https://gitlab.com/atulyw/cbz-student-ui.git'
+      }
+    }  
+    stage('Build'){
+        steps{
+         withSonarQubeEnv(installationName: 'sonar-server', credentialsId: 'sonar-token') {
+             sh 'mvn clean package sonar:sonar'
+              }  
+        }
+    }
+    stage('Sonar-Quality-Check'){
+        steps{
+            waitForQualityGate abortPipeline: true
+        }
+    }
+    stage('Deploy'){
+        steps{
+            echo 'Succesfully Deployed'
+        }
+    }
+  }
+}

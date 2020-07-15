@@ -1,0 +1,45 @@
+pipeline {
+  agent any
+  stages {
+    stage('Gitlab-Pull') { 
+      steps { 
+          dir('student-app') 
+          {
+          git credentialsId: 'GitLab', url: 'https://gitlab.com/atulyw/cbz-student-ui.git'
+      }
+    }  
+    }
+    stage('Build'){
+        steps{ 
+            dir('student-app') {
+        // withSonarQubeEnv(installationName: 'sonar-server', credentialsId: 'sonar-token') {
+             sh 'mvn clean package'
+        //      }  
+        }
+        }
+    }
+    //stage('Sonar-Quality-Check'){
+    //    steps{
+    //        dir('student-app') {
+    //        waitForQualityGate abortPipeline: true
+    //    }
+   // }
+   // }
+    stage('Terra-Pull'){
+        steps{
+            dir('test-env'){
+             git credentialsId: 'GitLab', url: 'https://gitlab.com/atulyw/terraform-b3.git'
+        }
+    }
+    }
+    stage('Test-Env'){
+        steps{
+            dir('test-env'){
+                sh label: '', script: '''cd day4
+                                         tf init
+                                         tf apply --auto-approve'''
+            }
+        }
+    }
+  }
+}

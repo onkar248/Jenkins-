@@ -1,0 +1,82 @@
+pipeline {
+  agent any
+  environment{
+      SELENIUM = '172.25.0.11'
+  }
+  stages {
+    stage('Gitlab-Pull') { 
+      steps { 
+          dir('student-app') 
+          {
+          git credentialsId: 'GitLab', url: 'https://gitlab.com/atulyw/cbz-student-ui.git'
+      }
+    }  
+    }
+    stage('Build'){
+        steps{ 
+            dir('student-app') {
+        // withSonarQubeEnv(installationName: 'sonar-server', credentialsId: 'sonar-token') {
+             sh 'mvn clean package'
+        //      }  
+        }
+        }
+    }
+    stage('Artifact-move'){
+        steps{
+            dir('student-app'){
+                sh 'aws s3 sync target/ s3://cbz-chetan/ --exclude "*" --include "*.war"' 
+            }
+        }
+    }
+    //stage('Sonar-Quality-Check'){
+    //    steps{
+    //        dir('student-app') {
+    //        waitForQualityGate abortPipeline: true
+    //    }
+   // }
+   // }
+    stage('Terra-Pull'){
+        steps{
+            dir('test-env'){
+             git credentialsId: 'GitLab', url: 'https://gitlab.com/atulyw/terraform-b3.git'
+        }
+    }
+    }
+    stage('Test-Env'){
+        steps{
+            dir('test-env'){
+                sh label: '', script: '''cd day4
+                                         tf init
+                                         tf apply --auto-approve'''
+            }
+        }
+    }
+    stage('Pull-Selenium'){
+        steps{
+            dir('Selenium'){
+                git credentialsId: 'GitLab', url: 'https://gitlab.com/atulyw/selenium-hub-b1.git'
+            }
+        }
+    }
+    
+    stage('Selenium-Build'){
+        environment {
+                tomcat_ip = sh(script:"cat /var/lib/jenkins/host", returnStdout:true).trim()  
+        }
+        steps{
+            dir('Selenium'){
+                sh """ 
+                sed -i -e 's/IPADDR/'\$tomcat_ip\'/g' src/test/java/framework/CrudStudent.java
+                mvn clean install \'-Dremote=true\' \'-DseleniumGridURL=http://${SELENIUM}:4444/wd/hub\' \'-Dbrowser=Chrome\' \'-Doverwrite.binaries=true\'
+                   """
+            }
+        }
+    }
+  }
+    // post { 
+     //   always { 
+       //     publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: '/var/lib/jenkins/workspace/test4/Selenium/target/surefire-reports', reportFiles: 'index.html', reportName: 'HTML Report', reportTitles: ''])
+        //    cleanWs()
+       // }
+   // }
+}

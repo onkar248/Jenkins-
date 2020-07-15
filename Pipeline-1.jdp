@@ -1,0 +1,30 @@
+pipeline {
+  agent any
+  stages {
+    stage('Gitlab-Pull') { 
+      steps {
+          git credentialsId: 'GitLab', url: 'https://gitlab.com/atulyw/cbz-student-ui.git'
+      }
+    }  
+    stage('List files') { 
+      steps {
+          sh label: '', script: 'ls'
+      }
+    }
+    stage('Test') { 
+      steps {
+          echo 'test succeful'
+      }
+    }
+    stage('Pre-Prod-Dept') { 
+      steps {
+          echo 'Deployed to pre-prod'   
+      }
+    }
+    stage('Prod-Dept') { 
+      steps {
+          echo 'Deployed to prod'
+      }
+    }
+  }
+}
